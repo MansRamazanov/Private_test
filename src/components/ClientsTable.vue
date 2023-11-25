@@ -16,7 +16,7 @@
         <th>Окончание</th>
       </tr>
       <tr v-for="client in clientList" :key="client.o_id">
-        <td>{{ client.o_id }}</td>
+        <td class="status_true">{{ client.o_id }}</td>
         <td>{{ client.client_name }}</td>
         <td>
           <ul v-for="(diet, index) in client.diets" :key="diet[index]">
@@ -32,14 +32,20 @@
         <td>{{ client.phone }}</td>
         <td>
           <ul v-for="(date, index) in client.dates" :key="date[index]">
-            <li>{{ date }}</li>
+            <li>
+              Начало: <nobr>{{ date.start_date }}</nobr> Конец:
+              <nobr>{{ date.end_date }}</nobr>
+            </li>
           </ul>
         </td>
-        <td>
+        <td
+          class="status_true"
+          :class="{ status_false: client.pay_status === 'Неоплачен ч.' }"
+        >
           <ul>
             <li>Стоим: {{ client.order_sum }}</li>
-            <li> {{ client.pay_status }} </li>
-            <li>Долг: {{ client.order_payed }}</li>
+            <li>{{ client.pay_status }}</li>
+            <li>Баланс: {{ client.order_payed }}</li>
           </ul>
         </td>
         <td>
@@ -52,7 +58,11 @@
             {{ client.inner_comment }}
           </p>
         </td>
-        <!-- <td>{{ client. }}</td> -->
+        <td>
+          <ul v-for="(date, index) in client.dates" :key="client[index]">
+          <li>{{ diffDate(date) }}</li>
+          </ul>
+        </td>
       </tr>
     </table>
   </div>
@@ -61,16 +71,31 @@
 <script setup>
 import clientList from "../data/data.js";
 
-console.log(clientList);
+
+function diffDate(obj) {
+  let todayYear = new Date().getFullYear();
+  let todayMonth = new Date().getMonth() + 1;
+  let todayDate = new Date().getDate();
+  let today = new Date(`${todayYear}-${todayMonth}-${todayDate}`);
+  const start = new Date(obj.start_date);
+  const end = new Date(obj.end_date);
+
+  if (today > start) {
+    let timeDiff = Math.abs(end.getTime() - today.getTime());
+    let diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    return `Заканчивается через ${diffDays} дней`;
+  } else {
+    let timeDiff = Math.abs(start.getTime() - today.getTime());
+    let diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    return `Начинается через ${diffDays} дней`;
+  }
+
+}
+
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.table {
-  display: table;
-  border-collapse: collapse;
-}
-
 th,
 td {
   border: 1px solid black;
@@ -87,5 +112,15 @@ li {
 
 ul:not(:first-child) {
   border-top: 1px dashed black;
+}
+.table {
+  display: table;
+  border-collapse: collapse;
+}
+.status_true {
+  background-color: rgb(32, 211, 32);
+}
+.status_false {
+  background-color: red;
 }
 </style>
