@@ -1,7 +1,18 @@
 <template>
   <div class="container">
-    <input class="search-input" type="text" placeholder="Введите имя" />
-    <table class="table">
+    <div class="filter">
+      <button v-on:click="isVisible = !isVisible">Фильтр</button>
+      <div v-if="isVisible">
+        <input
+          class="search-input"
+          type="text"
+          placeholder="Введите имя"
+          v-model="searchString"
+          v-on:change="onChangeSelected"
+        />
+      </div>
+    </div>
+    <table class="table" id="table">
       <tr>
         <th>Номер</th>
         <th>Имя/Фамилия</th>
@@ -13,114 +24,70 @@
         <th>Статус оплаты</th>
         <th>Коммантарий курьеру</th>
         <th>Комментарий</th>
-        <th>Окончание</th>
+        <th>
+          <button @click="toggleDatesSort">Статус</button>
+        </th>
       </tr>
-      <tr v-for="client in clientList" :key="client.o_id">
-        <td class="status_true">{{ client.o_id }}</td>
-        <td>{{ client.client_name }}</td>
-        <td>
-          <ul v-for="(diet, index) in client.diets" :key="diet[index]">
-            <li>{{ diet }}</li>
-          </ul>
-        </td>
-        <td>
-          <ul v-for="(tariff, index) in client.tariff" :key="tariff[index]">
-            <li>{{ tariff }}</li>
-          </ul>
-        </td>
-        <td>{{ client.address }}</td>
-        <td>{{ client.phone }}</td>
-        <td>
-          <ul v-for="(date, index) in client.dates" :key="date[index]">
-            <li>
-              Начало: <nobr>{{ date.start_date }}</nobr> Конец:
-              <nobr>{{ date.end_date }}</nobr>
-            </li>
-          </ul>
-        </td>
-        <td
-          class="status_true"
-          :class="{ status_false: client.pay_status === 'Неоплачен ч.' }"
-        >
-          <ul>
-            <li>Стоим: {{ client.order_sum }}</li>
-            <li>{{ client.pay_status }}</li>
-            <li>Баланс: {{ client.order_payed }}</li>
-          </ul>
-        </td>
-        <td>
-          <p>
-            {{ client.courier_comment }}
-          </p>
-        </td>
-        <td>
-          <p>
-            {{ client.inner_comment }}
-          </p>
-        </td>
-        <td>
-          <ul v-for="(date, index) in client.dates" :key="client[index]">
-          <li>{{ diffDate(date) }}</li>
-          </ul>
-        </td>
-      </tr>
+      <ClientsTableRow v-for="client in list" :key="client.id" :client="client" />
     </table>
   </div>
 </template>
 
 <script setup>
-import clientList from "../data/data.js";
+import { ref, onMounted, computed } from "vue";
+import { getClientsList } from "../data/clientsDataProvider";
+import { sortDietsDescending, sortDietsAscending } from "../helpers/sortDiets";
+import ClientsTableRow from './ClientsTableRow.vue'
 
+let isVisible = ref(false);
 
-function diffDate(obj) {
-  let todayYear = new Date().getFullYear();
-  let todayMonth = new Date().getMonth() + 1;
-  let todayDate = new Date().getDate();
-  let today = new Date(`${todayYear}-${todayMonth}-${todayDate}`);
-  const start = new Date(obj.start_date);
-  const end = new Date(obj.end_date);
+const clientsList = ref([]);
 
-  if (today > start) {
-    let timeDiff = Math.abs(end.getTime() - today.getTime());
-    let diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    return `Заканчивается через ${diffDays} дней`;
-  } else {
-    let timeDiff = Math.abs(start.getTime() - today.getTime());
-    let diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    return `Начинается через ${diffDays} дней`;
-  }
+const SORT_TYPE = {
+  DATES_DESC: "DATES_DESC",
+  DATES_ACS: "DATES_ACS",
+};
 
+const sortType = ref(SORT_TYPE.DATES_DESC);
+
+onMounted(async () => {
+  console.log("onMounted");
+  const clientListData = await getClientsList();
+  clientsList.value = clientListData;
+  console.log(clientsList.value);
+});
+
+const list = computed(() => {
+  const list = clientsList.value
+    .filter((client) => client.diets.length > 0)
+    .sort((first, second) => {
+      switch (sortType.value) {
+        case SORT_TYPE.DATES_DESC: {
+          return sortDietsDescending(first.diets[0], second.diets[0]);
+        }
+        case SORT_TYPE.DATES_ACS: {
+          return sortDietsAscending(first.diets[0], second.diets[0]);
+        }
+      }
+    });
+
+  console.log(list);
+  return list;
+});
+
+function toggleDatesSort() {
+  sortType.value =
+    sortType.value === SORT_TYPE.DATES_DESC
+      ? SORT_TYPE.DATES_ACS
+      : SORT_TYPE.DATES_DESC;
 }
-
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-th,
-td {
-  border: 1px solid black;
-}
+<style>
 
-ul {
-  padding-left: 0;
-  text-align: center;
-}
-
-li {
-  list-style-type: none;
-}
-
-ul:not(:first-child) {
-  border-top: 1px dashed black;
-}
 .table {
   display: table;
   border-collapse: collapse;
 }
-.status_true {
-  background-color: rgb(32, 211, 32);
-}
-.status_false {
-  background-color: red;
-}
+
 </style>
